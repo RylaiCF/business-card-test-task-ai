@@ -21,6 +21,8 @@ import { DataLoaderFactory } from './domain/dataloaders';
         autoSchemaFile: join(process.cwd(), 'schema.gql'),
         sortSchema: true,
         playground: false,
+        introspection: true,
+        csrfPrevention: false,
         plugins: [
           ApolloServerPluginLandingPageLocalDefault({ embed: true }) as any,
         ],
