@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExperienceResolver } from './experience.resolver';
 import { IDataLoaders } from '../../domain/dataloaders';
+import { Experience, Achievement } from '../../domain/types';
 
 describe('ExperienceResolver', () => {
   let resolver: ExperienceResolver;
   let mockLoaders: Partial<IDataLoaders>;
 
-  const mockExperiences = [
+  const mockExperiences: Experience[] = [
     {
       id: 'e-1',
       profileId: 'p-1',
@@ -18,9 +19,12 @@ describe('ExperienceResolver', () => {
     },
   ];
 
-  const mockAchievements = [
+  const mockAchievements: Achievement[] = [
     {
+      id: 'a-1',
+      experienceId: 'e-1',
       description: 'Reduced API latency by 45% using DataLoader',
+      order: 1,
     },
   ];
 
@@ -45,7 +49,7 @@ describe('ExperienceResolver', () => {
   describe('achievements field resolver', () => {
     it('should batch achievements via achievementsByExperienceIdLoader', async () => {
       const result = await resolver.getAchievements(
-        mockExperiences[0] as any,
+        mockExperiences[0],
         mockLoaders as IDataLoaders,
       );
       expect(

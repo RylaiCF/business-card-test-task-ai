@@ -1,11 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DomainModule } from './domain.module';
-import {
-  ProfileService,
-  ExperienceService,
-  ProjectService,
-  SkillService,
-} from './services';
+import { ProfileService } from './services';
 import { DataLoaderFactory } from './dataloaders';
 import { PrismaService } from '../persistence/prisma.service';
 
@@ -31,12 +26,9 @@ describe('DomainModule', () => {
       .compile();
   });
 
-  it('should compile and provide all domain services', () => {
+  it('should compile and provide domain services and dataloaders', () => {
     expect(module).toBeDefined();
     expect(module.get<ProfileService>(ProfileService)).toBeDefined();
-    expect(module.get<ExperienceService>(ExperienceService)).toBeDefined();
-    expect(module.get<ProjectService>(ProjectService)).toBeDefined();
-    expect(module.get<SkillService>(SkillService)).toBeDefined();
     expect(module.get<DataLoaderFactory>(DataLoaderFactory)).toBeDefined();
   });
 });

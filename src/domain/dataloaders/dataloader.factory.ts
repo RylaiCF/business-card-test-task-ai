@@ -6,14 +6,8 @@ import {
   Achievement,
   Project,
   Skill,
-} from '@prisma/client';
-import {
-  SkillRepository,
-  ExperienceRepository,
-  AchievementRepository,
-  ProjectRepository,
-  ProfileLinkRepository,
-} from '../../persistence/repositories';
+} from '../types';
+import { PrismaService } from '../../persistence/prisma.service';
 
 export interface IDataLoaders {
   skillsByProfileIdLoader: DataLoader<string, Skill[]>;
@@ -46,61 +40,88 @@ export function groupByForeignKey<T, K extends keyof T>(
   return keys.map((key) => map.get(key) ?? []);
 }
 
+export function createRelationLoader<T, K extends keyof T, R = T>(
+  fetcher: (keys: readonly string[]) => Promise<T[]>,
+  foreignKey: K,
+): DataLoader<string, R[]> {
+  return new DataLoader<string, R[]>(async (keys: readonly string[]) => {
+    const items = await fetcher(keys);
+    return groupByForeignKey(keys, items, foreignKey) as unknown as R[][];
+  });
+}
+
 @Injectable()
 export class DataLoaderFactory {
-  constructor(
-    private readonly skillRepository: SkillRepository,
-    private readonly experienceRepository: ExperienceRepository,
-    private readonly achievementRepository: AchievementRepository,
-    private readonly projectRepository: ProjectRepository,
-    private readonly profileLinkRepository: ProfileLinkRepository,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   createDataLoaders(): IDataLoaders {
-    const skillsByProfileIdLoader = new DataLoader<string, Skill[]>(
+    const skillsByProfileIdLoader = createRelationLoader<
+      Skill & { profileId: string },
+      'profileId',
+      Skill
+    >(
       async (profileIds: readonly string[]) => {
-        const profileSkills = await this.skillRepository.findByProfileIds([
-          ...profileIds,
-        ]);
-        return groupByForeignKey(profileIds, profileSkills, 'profileId');
+        const profileSkills = await this.prisma.profileSkill.findMany({
+          where: {
+            profileId: { in: [...profileIds] },
+          },
+          include: {
+            skill: true,
+          },
+        });
+
+        return profileSkills.map((ps) => ({
+          ...ps.skill,
+          profileId: ps.profileId,
+        }));
       },
+      'profileId',
     );
 
-    const experiencesByProfileIdLoader = new DataLoader<string, Experience[]>(
-      async (profileIds: readonly string[]) => {
-        const experiences = await this.experienceRepository.findByProfileIds([
-          ...profileIds,
-        ]);
-        return groupByForeignKey(profileIds, experiences, 'profileId');
-      },
+    const experiencesByProfileIdLoader = createRelationLoader(
+      async (profileIds: readonly string[]) =>
+        this.prisma.experience.findMany({
+          where: {
+            profileId: { in: [...profileIds] },
+          },
+          orderBy: {
+            startDate: 'desc',
+          },
+        }),
+      'profileId',
     );
 
-    const achievementsByExperienceIdLoader = new DataLoader<
-      string,
-      Achievement[]
-    >(async (experienceIds: readonly string[]) => {
-      const achievements = await this.achievementRepository.findByExperienceIds(
-        [...experienceIds],
-      );
-      return groupByForeignKey(experienceIds, achievements, 'experienceId');
-    });
-
-    const projectsByProfileIdLoader = new DataLoader<string, Project[]>(
-      async (profileIds: readonly string[]) => {
-        const projects = await this.projectRepository.findByProfileIds([
-          ...profileIds,
-        ]);
-        return groupByForeignKey(profileIds, projects, 'profileId');
-      },
+    const achievementsByExperienceIdLoader = createRelationLoader(
+      async (experienceIds: readonly string[]) =>
+        this.prisma.achievement.findMany({
+          where: {
+            experienceId: { in: [...experienceIds] },
+          },
+          orderBy: {
+            order: 'asc',
+          },
+        }),
+      'experienceId',
     );
 
-    const profileLinksByProfileIdLoader = new DataLoader<string, ProfileLink[]>(
-      async (profileIds: readonly string[]) => {
-        const profileLinks = await this.profileLinkRepository.findByProfileIds([
-          ...profileIds,
-        ]);
-        return groupByForeignKey(profileIds, profileLinks, 'profileId');
-      },
+    const projectsByProfileIdLoader = createRelationLoader(
+      async (profileIds: readonly string[]) =>
+        this.prisma.project.findMany({
+          where: {
+            profileId: { in: [...profileIds] },
+          },
+        }),
+      'profileId',
+    );
+
+    const profileLinksByProfileIdLoader = createRelationLoader(
+      async (profileIds: readonly string[]) =>
+        this.prisma.profileLink.findMany({
+          where: {
+            profileId: { in: [...profileIds] },
+          },
+        }),
+      'profileId',
     );
 
     return {

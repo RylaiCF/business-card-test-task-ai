@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ProfileModel } from '../types';
+import { Profile } from '../types';
 import { ProfileRepository } from '../../persistence/repositories/profile.repository';
 
 @Injectable()
@@ -8,7 +8,7 @@ export class ProfileService {
 
   constructor(private readonly profileRepository: ProfileRepository) {}
 
-  async getProfile(): Promise<ProfileModel> {
+  async getProfile(): Promise<Profile> {
     this.logger.debug('Fetching root profile');
     const profile = await this.profileRepository.findFirst();
     if (!profile) {

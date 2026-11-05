@@ -1,41 +1,24 @@
-export interface ProfileModel {
-  id: string;
-  name: string;
-  description: string;
-}
+export type {
+  Profile,
+  ProfileLink,
+  Experience,
+  Achievement,
+  Project,
+  Skill,
+} from '@prisma/client';
 
-export interface ProfileLinkModel {
-  id: string;
-  profileId: string;
-  platform: string;
-  url: string;
-}
+import type {
+  Profile,
+  ProfileLink,
+  Experience,
+  Achievement,
+  Project,
+  Skill,
+} from '@prisma/client';
 
-export interface ExperienceModel {
-  id: string;
-  profileId: string;
-  company: string;
-  position: string;
-  startDate: Date;
-  endDate: Date | null;
-  isCurrent: boolean;
-}
-
-export interface AchievementModel {
-  id: string;
-  experienceId: string;
-  description: string;
-  order: number;
-}
-
-export interface ProjectModel {
-  id: string;
-  profileId: string;
-  name: string;
-  url: string | null;
-}
-
-export interface SkillModel {
-  id: string;
-  name: string;
-}
+export type ProfileModel = Profile;
+export type ProfileLinkModel = ProfileLink;
+export type ExperienceModel = Experience;
+export type AchievementModel = Achievement;
+export type ProjectModel = Project;
+export type SkillModel = Skill;

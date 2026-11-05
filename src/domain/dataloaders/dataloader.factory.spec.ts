@@ -1,41 +1,33 @@
 import {
   DataLoaderFactory,
   groupByForeignKey,
+  createRelationLoader,
   IDataLoaders,
 } from './dataloader.factory';
-import {
-  SkillRepository,
-  ExperienceRepository,
-  AchievementRepository,
-  ProjectRepository,
-  ProfileLinkRepository,
-} from '../../persistence/repositories';
+import { PrismaService } from '../../persistence/prisma.service';
 
 describe('DataLoaderFactory & Batching Mechanics', () => {
   let factory: DataLoaderFactory;
   let loaders: IDataLoaders;
 
-  let skillRepository: { findByProfileIds: any };
-  let experienceRepository: { findByProfileIds: any };
-  let achievementRepository: { findByExperienceIds: any };
-  let projectRepository: { findByProfileIds: any };
-  let profileLinkRepository: { findByProfileIds: any };
+  let prisma: {
+    profileSkill: { findMany: any };
+    experience: { findMany: any };
+    achievement: { findMany: any };
+    project: { findMany: any };
+    profileLink: { findMany: any };
+  };
 
   beforeEach(() => {
-    skillRepository = { findByProfileIds: vi.fn() };
-    experienceRepository = { findByProfileIds: vi.fn() };
-    achievementRepository = { findByExperienceIds: vi.fn() };
-    projectRepository = { findByProfileIds: vi.fn() };
-    profileLinkRepository = { findByProfileIds: vi.fn() };
+    prisma = {
+      profileSkill: { findMany: vi.fn() },
+      experience: { findMany: vi.fn() },
+      achievement: { findMany: vi.fn() },
+      project: { findMany: vi.fn() },
+      profileLink: { findMany: vi.fn() },
+    };
 
-    factory = new DataLoaderFactory(
-      skillRepository as unknown as SkillRepository,
-      experienceRepository as unknown as ExperienceRepository,
-      achievementRepository as unknown as AchievementRepository,
-      projectRepository as unknown as ProjectRepository,
-      profileLinkRepository as unknown as ProfileLinkRepository,
-    );
-
+    factory = new DataLoaderFactory(prisma as unknown as PrismaService);
     loaders = factory.createDataLoaders();
   });
 
@@ -59,31 +51,58 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         [],
       ]);
     });
+
+    it('should return empty arrays for keys with no matching items', () => {
+      const keys = ['x', 'y'];
+      const items = [{ id: '1', parentId: 'z' }];
+
+      const result = groupByForeignKey(keys, items, 'parentId');
+
+      expect(result).toEqual([[], []]);
+    });
+  });
+
+  describe('createRelationLoader helper', () => {
+    it('should batch keys into a single fetcher invocation and group results by foreignKey', async () => {
+      const fetcher = vi.fn().mockResolvedValue([
+        { id: '1', parentId: 'k2' },
+        { id: '2', parentId: 'k1' },
+      ]);
+      const loader = createRelationLoader(fetcher, 'parentId');
+
+      const [k1Res, k2Res, k3Res] = await Promise.all([
+        loader.load('k1'),
+        loader.load('k2'),
+        loader.load('k3'),
+      ]);
+
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(fetcher).toHaveBeenCalledWith(['k1', 'k2', 'k3']);
+      expect(k1Res).toEqual([{ id: '2', parentId: 'k1' }]);
+      expect(k2Res).toEqual([{ id: '1', parentId: 'k2' }]);
+      expect(k3Res).toEqual([]);
+    });
   });
 
   describe('skillsByProfileIdLoader', () => {
-    it('should batch multiple profile IDs into a single query via SkillRepository', async () => {
-      const skill1 = {
-        id: 's1',
-        name: 'TypeScript',
+    it('should batch multiple profile IDs into a single query via prisma.profileSkill.findMany', async () => {
+      const ps1 = {
         profileId: 'p1',
+        skillId: 's1',
+        skill: { id: 's1', name: 'TypeScript' },
       };
-      const skill2 = {
-        id: 's2',
-        name: 'PostgreSQL',
+      const ps2 = {
         profileId: 'p1',
+        skillId: 's2',
+        skill: { id: 's2', name: 'PostgreSQL' },
       };
-      const skill3 = {
-        id: 's3',
-        name: 'Docker',
+      const ps3 = {
         profileId: 'p2',
+        skillId: 's3',
+        skill: { id: 's3', name: 'Docker' },
       };
 
-      skillRepository.findByProfileIds.mockResolvedValue([
-        skill3,
-        skill1,
-        skill2,
-      ]);
+      prisma.profileSkill.findMany.mockResolvedValue([ps3, ps1, ps2]);
 
       const [p1Skills, p2Skills, p3Skills] = await Promise.all([
         loaders.skillsByProfileIdLoader.load('p1'),
@@ -91,21 +110,25 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         loaders.skillsByProfileIdLoader.load('p3'),
       ]);
 
-      expect(skillRepository.findByProfileIds).toHaveBeenCalledTimes(1);
-      expect(skillRepository.findByProfileIds).toHaveBeenCalledWith([
-        'p1',
-        'p2',
-        'p3',
-      ]);
+      expect(prisma.profileSkill.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.profileSkill.findMany).toHaveBeenCalledWith({
+        where: { profileId: { in: ['p1', 'p2', 'p3'] } },
+        include: { skill: true },
+      });
 
-      expect(p1Skills).toEqual([skill1, skill2]);
-      expect(p2Skills).toEqual([skill3]);
+      expect(p1Skills).toEqual([
+        { id: 's1', name: 'TypeScript', profileId: 'p1' },
+        { id: 's2', name: 'PostgreSQL', profileId: 'p1' },
+      ]);
+      expect(p2Skills).toEqual([
+        { id: 's3', name: 'Docker', profileId: 'p2' },
+      ]);
       expect(p3Skills).toEqual([]);
     });
   });
 
   describe('experiencesByProfileIdLoader', () => {
-    it('should batch profile IDs into single query via ExperienceRepository', async () => {
+    it('should batch profile IDs into single query with desc startDate ordering', async () => {
       const exp1 = {
         id: 'e1',
         profileId: 'p1',
@@ -125,7 +148,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         isCurrent: false,
       };
 
-      experienceRepository.findByProfileIds.mockResolvedValue([exp1, exp2]);
+      prisma.experience.findMany.mockResolvedValue([exp1, exp2]);
 
       const [p1Exp, p2Exp, p3Exp] = await Promise.all([
         loaders.experiencesByProfileIdLoader.load('p1'),
@@ -133,12 +156,11 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         loaders.experiencesByProfileIdLoader.load('p3'),
       ]);
 
-      expect(experienceRepository.findByProfileIds).toHaveBeenCalledTimes(1);
-      expect(experienceRepository.findByProfileIds).toHaveBeenCalledWith([
-        'p1',
-        'p2',
-        'p3',
-      ]);
+      expect(prisma.experience.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.experience.findMany).toHaveBeenCalledWith({
+        where: { profileId: { in: ['p1', 'p2', 'p3'] } },
+        orderBy: { startDate: 'desc' },
+      });
       expect(p1Exp).toEqual([exp1]);
       expect(p2Exp).toEqual([exp2]);
       expect(p3Exp).toEqual([]);
@@ -146,7 +168,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
   });
 
   describe('achievementsByExperienceIdLoader', () => {
-    it('should batch experience IDs into single query via AchievementRepository', async () => {
+    it('should batch experience IDs into single query with asc order ordering', async () => {
       const a1 = {
         id: 'a1',
         experienceId: 'e1',
@@ -166,7 +188,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         order: 1,
       };
 
-      achievementRepository.findByExperienceIds.mockResolvedValue([a3, a1, a2]);
+      prisma.achievement.findMany.mockResolvedValue([a3, a1, a2]);
 
       const [e1Ach, e2Ach, e3Ach] = await Promise.all([
         loaders.achievementsByExperienceIdLoader.load('e1'),
@@ -174,14 +196,11 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         loaders.achievementsByExperienceIdLoader.load('e3'),
       ]);
 
-      expect(achievementRepository.findByExperienceIds).toHaveBeenCalledTimes(
-        1,
-      );
-      expect(achievementRepository.findByExperienceIds).toHaveBeenCalledWith([
-        'e1',
-        'e2',
-        'e3',
-      ]);
+      expect(prisma.achievement.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.achievement.findMany).toHaveBeenCalledWith({
+        where: { experienceId: { in: ['e1', 'e2', 'e3'] } },
+        orderBy: { order: 'asc' },
+      });
       expect(e1Ach).toEqual([a1, a2]);
       expect(e2Ach).toEqual([a3]);
       expect(e3Ach).toEqual([]);
@@ -189,7 +208,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
   });
 
   describe('projectsByProfileIdLoader', () => {
-    it('should batch profile IDs into single query via ProjectRepository', async () => {
+    it('should batch profile IDs into single query via prisma.project.findMany', async () => {
       const proj1 = {
         id: 'pr1',
         profileId: 'p1',
@@ -203,7 +222,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         url: 'https://p2.com',
       };
 
-      projectRepository.findByProfileIds.mockResolvedValue([proj1, proj2]);
+      prisma.project.findMany.mockResolvedValue([proj1, proj2]);
 
       const [p1Projects, p2Projects, p3Projects] = await Promise.all([
         loaders.projectsByProfileIdLoader.load('p1'),
@@ -211,12 +230,10 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         loaders.projectsByProfileIdLoader.load('p3'),
       ]);
 
-      expect(projectRepository.findByProfileIds).toHaveBeenCalledTimes(1);
-      expect(projectRepository.findByProfileIds).toHaveBeenCalledWith([
-        'p1',
-        'p2',
-        'p3',
-      ]);
+      expect(prisma.project.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.project.findMany).toHaveBeenCalledWith({
+        where: { profileId: { in: ['p1', 'p2', 'p3'] } },
+      });
       expect(p1Projects).toEqual([proj1]);
       expect(p2Projects).toEqual([proj2]);
       expect(p3Projects).toEqual([]);
@@ -224,7 +241,7 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
   });
 
   describe('profileLinksByProfileIdLoader', () => {
-    it('should batch profile IDs into single query via ProfileLinkRepository', async () => {
+    it('should batch profile IDs into single query via prisma.profileLink.findMany', async () => {
       const link1 = {
         id: 'l1',
         profileId: 'p1',
@@ -238,18 +255,17 @@ describe('DataLoaderFactory & Batching Mechanics', () => {
         url: 'https://linkedin.com/in/p1',
       };
 
-      profileLinkRepository.findByProfileIds.mockResolvedValue([link1, link2]);
+      prisma.profileLink.findMany.mockResolvedValue([link1, link2]);
 
       const [p1Links, p2Links] = await Promise.all([
         loaders.profileLinksByProfileIdLoader.load('p1'),
         loaders.profileLinksByProfileIdLoader.load('p2'),
       ]);
 
-      expect(profileLinkRepository.findByProfileIds).toHaveBeenCalledTimes(1);
-      expect(profileLinkRepository.findByProfileIds).toHaveBeenCalledWith([
-        'p1',
-        'p2',
-      ]);
+      expect(prisma.profileLink.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.profileLink.findMany).toHaveBeenCalledWith({
+        where: { profileId: { in: ['p1', 'p2'] } },
+      });
       expect(p1Links).toEqual([link1, link2]);
       expect(p2Links).toEqual([]);
     });

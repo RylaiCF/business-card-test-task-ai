@@ -1,25 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import {
-  ProfileRepository,
-  ExperienceRepository,
-  AchievementRepository,
-  ProjectRepository,
-  SkillRepository,
-  ProfileLinkRepository,
-} from './repositories';
-
-const repositories = [
-  ProfileRepository,
-  ExperienceRepository,
-  AchievementRepository,
-  ProjectRepository,
-  SkillRepository,
-  ProfileLinkRepository,
-];
+import { ProfileRepository } from './repositories';
 
 @Module({
-  providers: [PrismaService, ...repositories],
-  exports: [PrismaService, ...repositories],
+  providers: [PrismaService, ProfileRepository],
+  exports: [PrismaService, ProfileRepository],
 })
 export class PersistenceModule {}

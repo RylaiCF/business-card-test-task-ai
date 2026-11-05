@@ -1,18 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PersistenceModule } from '../persistence/persistence.module';
-import {
-  ProfileService,
-  ExperienceService,
-  ProjectService,
-  SkillService,
-} from './services';
+import { ProfileService } from './services';
 import { DataLoaderFactory } from './dataloaders';
 
 const services = [
   ProfileService,
-  ExperienceService,
-  ProjectService,
-  SkillService,
   DataLoaderFactory,
 ];
 

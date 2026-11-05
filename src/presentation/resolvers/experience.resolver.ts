@@ -1,5 +1,5 @@
 import { Resolver, ResolveField, Parent, Context } from '@nestjs/graphql';
-import { ExperienceModel } from '../../domain/types';
+import { Experience, Achievement } from '../../domain/types';
 import { IDataLoaders } from '../../domain/dataloaders';
 import { ExperienceType, AchievementType } from '../types';
 
@@ -10,11 +10,9 @@ export class ExperienceResolver {
     description: 'Resolves achievements delivered during this role',
   })
   async getAchievements(
-    @Parent() experience: ExperienceModel,
+    @Parent() experience: Experience,
     @Context('loaders') loaders: IDataLoaders,
-  ): Promise<AchievementType[]> {
-    return loaders.achievementsByExperienceIdLoader.load(
-      experience.id,
-    ) as unknown as Promise<AchievementType[]>;
+  ): Promise<Achievement[]> {
+    return loaders.achievementsByExperienceIdLoader.load(experience.id);
   }
 }

@@ -6,8 +6,7 @@ import { ProfileRepository } from '../../persistence/repositories/profile.reposi
 describe('ProfileService', () => {
   let service: ProfileService;
   let profileRepository: {
-    findFirst: any;
-    findById: any;
+    findFirst: ReturnType<typeof vi.fn>;
   };
 
   const mockProfile = {
@@ -19,7 +18,6 @@ describe('ProfileService', () => {
   beforeEach(async () => {
     profileRepository = {
       findFirst: vi.fn(),
-      findById: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

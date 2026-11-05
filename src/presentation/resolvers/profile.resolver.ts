@@ -6,7 +6,13 @@ import {
   Context,
 } from '@nestjs/graphql';
 import { ProfileService } from '../../domain/services/profile.service';
-import { ProfileModel } from '../../domain/types';
+import {
+  Profile,
+  ProfileLink,
+  Skill,
+  Experience,
+  Project,
+} from '../../domain/types';
 import { IDataLoaders } from '../../domain/dataloaders';
 import {
   ProfileType,
@@ -24,7 +30,7 @@ export class ProfileResolver {
     name: 'profile',
     description: "Returns the specialist's profile",
   })
-  async getProfile(): Promise<ProfileModel> {
+  async getProfile(): Promise<Profile> {
     return this.profileService.getProfile();
   }
 
@@ -34,12 +40,10 @@ export class ProfileResolver {
       'Resolves external profile links via DataLoader batching (GLOSSARY.md compliant)',
   })
   async getProfileLinks(
-    @Parent() profile: ProfileModel,
+    @Parent() profile: Profile,
     @Context('loaders') loaders: IDataLoaders,
-  ): Promise<ProfileLinkType[]> {
-    return loaders.profileLinksByProfileIdLoader.load(
-      profile.id,
-    ) as unknown as Promise<ProfileLinkType[]>;
+  ): Promise<ProfileLink[]> {
+    return loaders.profileLinksByProfileIdLoader.load(profile.id);
   }
 
   @ResolveField(() => [SkillType], {
@@ -47,12 +51,10 @@ export class ProfileResolver {
     description: 'Resolves technical skills via DataLoader batching',
   })
   async getSkills(
-    @Parent() profile: ProfileModel,
+    @Parent() profile: Profile,
     @Context('loaders') loaders: IDataLoaders,
-  ): Promise<SkillType[]> {
-    return loaders.skillsByProfileIdLoader.load(
-      profile.id,
-    ) as unknown as Promise<SkillType[]>;
+  ): Promise<Skill[]> {
+    return loaders.skillsByProfileIdLoader.load(profile.id);
   }
 
   @ResolveField(() => [ExperienceType], {
@@ -60,12 +62,10 @@ export class ProfileResolver {
     description: 'Resolves work experience history via DataLoader batching',
   })
   async getExperience(
-    @Parent() profile: ProfileModel,
+    @Parent() profile: Profile,
     @Context('loaders') loaders: IDataLoaders,
-  ): Promise<ExperienceType[]> {
-    return loaders.experiencesByProfileIdLoader.load(
-      profile.id,
-    ) as unknown as Promise<ExperienceType[]>;
+  ): Promise<Experience[]> {
+    return loaders.experiencesByProfileIdLoader.load(profile.id);
   }
 
   @ResolveField(() => [ProjectType], {
@@ -73,11 +73,9 @@ export class ProfileResolver {
     description: 'Resolves showcase projects via DataLoader batching',
   })
   async getProjects(
-    @Parent() profile: ProfileModel,
+    @Parent() profile: Profile,
     @Context('loaders') loaders: IDataLoaders,
-  ): Promise<ProjectType[]> {
-    return loaders.projectsByProfileIdLoader.load(
-      profile.id,
-    ) as unknown as Promise<ProjectType[]>;
+  ): Promise<Project[]> {
+    return loaders.projectsByProfileIdLoader.load(profile.id);
   }
 }
