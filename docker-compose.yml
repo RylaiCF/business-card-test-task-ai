@@ -1,0 +1,17 @@
+services:
+  vizitka:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vizitka-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_URL=file:/app/data/dev.db
+    volumes:
+      - sqlite_data:/app/data
+
+volumes:
+  sqlite_data:
