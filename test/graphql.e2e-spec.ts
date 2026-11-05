@@ -107,7 +107,19 @@ describe('GraphQL API & N+1 Prevention (E2E)', () => {
       }
 
       // 4. Experiences & Nested Achievements
-      expect(profile.experience.length).toBeGreaterThanOrEqual(2);
+      expect(profile.experience.length).toBe(7);
+      const expCompanies = profile.experience.map(
+        (e: { company: string }) => e.company,
+      );
+      expect(expCompanies).toEqual([
+        'Robusta',
+        'Yonder',
+        'Lyft',
+        'EPAM',
+        'ScienceSoft',
+        'Sportdata',
+        'HQSoftware',
+      ]);
       for (const exp of profile.experience) {
         expect(typeof exp.company).toBe('string');
         expect(exp.company.length).toBeGreaterThan(0);
@@ -121,7 +133,7 @@ describe('GraphQL API & N+1 Prevention (E2E)', () => {
       }
 
       // 5. Projects
-      expect(profile.projects.length).toBeGreaterThanOrEqual(3);
+      expect(profile.projects.length).toBeGreaterThanOrEqual(10);
       for (const proj of profile.projects) {
         expect(typeof proj.name).toBe('string');
         expect(proj.name.length).toBeGreaterThan(0);

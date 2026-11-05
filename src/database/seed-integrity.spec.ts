@@ -62,6 +62,13 @@ describe('Database Seed Integrity', () => {
     });
     expect(profile).toBeDefined();
 
+    const skillNames = skills.map((s) => s.name);
+    expect(skillNames).toContain('TypeScript');
+    expect(skillNames).toContain('NestJS');
+    expect(skillNames).toContain('Claude Code');
+    expect(skillNames).toContain('Antigravity');
+    expect(skillNames).toContain('English (B2)');
+
     for (const skill of skills) {
       expect(typeof skill.name).toBe('string');
       expect(skill.name.length).toBeGreaterThan(0);
@@ -77,7 +84,17 @@ describe('Database Seed Integrity', () => {
       orderBy: { startDate: 'desc' },
     });
 
-    expect(experiences.length).toBeGreaterThanOrEqual(5);
+    expect(experiences.length).toBe(7);
+    const companies = experiences.map((e) => e.company);
+    expect(companies).toEqual([
+      'Robusta',
+      'Yonder',
+      'Lyft',
+      'EPAM',
+      'ScienceSoft',
+      'Sportdata',
+      'HQSoftware',
+    ]);
 
     for (const exp of experiences) {
       expect(typeof exp.company).toBe('string');
@@ -98,7 +115,20 @@ describe('Database Seed Integrity', () => {
   it('should have showcase projects satisfying schema contract', async () => {
     const projects = await prisma.project.findMany();
 
-    expect(projects.length).toBeGreaterThanOrEqual(5);
+    expect(projects.length).toBeGreaterThanOrEqual(10);
+    const projectNames = projects.map((p) => p.name);
+    expect(
+      projectNames.some((n) => n.includes('B2B CRM Platform')),
+    ).toBe(true);
+    expect(
+      projectNames.some((n) => n.includes('Travel Platform')),
+    ).toBe(true);
+    expect(
+      projectNames.some((n) => n.includes('Telematics Events Visualizer')),
+    ).toBe(true);
+    expect(
+      projectNames.some((n) => n.includes('Drilling Rig Data Platform')),
+    ).toBe(true);
 
     for (const proj of projects) {
       expect(typeof proj.name).toBe('string');
