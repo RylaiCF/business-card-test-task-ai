@@ -1,0 +1,66 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+"""Measurable achievement delivered during work experience"""
+type Achievement {
+  description: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+"""Work experience record"""
+type Experience {
+  """Resolves achievements delivered during this role"""
+  achievements: [Achievement!]!
+  company: String!
+  endDate: DateTime
+  isCurrent: Boolean!
+  position: String!
+  startDate: DateTime!
+}
+
+"""The specialist professional profile aggregate"""
+type Profile {
+  description: String!
+
+  """Resolves work experience history via DataLoader batching"""
+  experience: [Experience!]!
+  name: String!
+
+  """
+  Resolves external profile links via DataLoader batching (GLOSSARY.md compliant)
+  """
+  profileLinks: [ProfileLink!]!
+
+  """Resolves showcase projects via DataLoader batching"""
+  projects: [Project!]!
+
+  """Resolves technical skills via DataLoader batching"""
+  skills: [Skill!]!
+}
+
+"""External profile link or reference"""
+type ProfileLink {
+  platform: String!
+  url: String!
+}
+
+"""Showcase project highlighting practical applications"""
+type Project {
+  name: String!
+  url: String
+}
+
+type Query {
+  """Returns the specialist's profile"""
+  profile: Profile!
+}
+
+"""Engineering skill in a technical area"""
+type Skill {
+  name: String!
+}
